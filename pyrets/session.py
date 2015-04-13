@@ -1,129 +1,134 @@
 # -*- coding: utf-8 -*-
+
+import requests
+import xmltodict
+
 import socket
 import hashlib
 import time
 import urllib.parse
-import requests
-import xmltodict
 from urllib.parse import urlparse, urljoin
-
-from .exceptions import NoLoginException
-
 
 
 class RetsSession(object):
 
-    def __init__(self, user, passwd, user_agent, user_agent_passwd, rets_version, login_url):
-        self.rets_ua_authorization = None
+    def __init__(self, login_url, user, passwd, user_agent=None,
+                 user_agent_passwd=None, rets_version="RETS/1.7"):
         self.user = user
         self.passwd = passwd
         self.user_agent = user_agent
         self.user_agent_passwd = user_agent_passwd
         self.rets_version = rets_version
-        self.base_url = self._get_base_url(login_url)
         self.login_url = login_url
+        self.session_id = ''
+        # cache session
         self._session = None
-        self.login_called = False
 
-         
-    def _get_base_url(self, url_str):
-        url_parts = urlparse(url_str)
+    @property
+    def base_url(self):
+        url_parts = urlparse(self.login_url)
         resURL = url_parts.scheme + "://" + url_parts.netloc
         return resURL
-        
-    def _set_rets_ua_authorization(self):
-        self._session.headers['RETS-UA-Authorization'] = self.rets_ua_authorization;
 
-    def _calculate_rets_ua_authorization(self, sid, user_agent, user_agent_passwd, rets_version):
-        product = user_agent
-        a1hashed = hashlib.md5(bytes(product + ':' + user_agent_passwd, 'utf-8')).hexdigest()
-        retsrequestid = ''
-        retssessionid = sid
-        digestHash = hashlib.md5(bytes(a1hashed + ':' + retsrequestid + ':' + retssessionid + ':' + rets_version, 'utf-8')).hexdigest()
+    @property
+    def rets_ua_authorization(self):
+        a1hashed = hashlib.md5(bytes(
+            self.user_agent + ':' + self.user_agent_passwd,
+            'utf-8')).hexdigest()
+        digestHash = hashlib.md5(bytes(
+            a1hashed + ':' + self.session_id + ':' +
+            self.session_id + ':' + self.rets_version,
+            'utf-8')).hexdigest()
         return 'Digest ' + digestHash
 
-    def login(self):
-        self._session = requests.session()
-        
-        headers = {'User-Agent':self.user_agent,
-               'RETS-Version':self.rets_version,
-               'Accept':"*/*"}
-        
+    @property
+    def session(self):
+        if not self._session:
+            raise ValueError("You need to call login")
         if self.user_agent_passwd:
-            headers['RETS-UA-Authorization'] = self._calculate_rets_ua_authorization(''
-                                                                            , self.user_agent
-                                                                            , self.user_agent_passwd
-                                                                            , self.rets_version)
-            
-        auth = requests.auth.HTTPDigestAuth(self.user, self.passwd)
-        
-        self._session.headers = headers
-        self._session.auth = auth
+            self._session.headers[
+                'RETS-UA-Authorization'] = self.rets_ua_authorization
+        return self._session
 
-        login_result = self._session.get(self.login_url)
-        login_result.raise_for_status()
-        
-        self.server_info = xmltodict.parse(ogin_result.text)
-        
+    def login(self):
+        _session = requests.session()
+        headers = {'User-Agent': self.user_agent,
+                   'RETS-Version': self.rets_version,
+                   'Accept': "*/*"}
         if self.user_agent_passwd:
-            self.rets_ua_authorization = self._calculate_rets_ua_authorization(login_result.cookies['RETS-Session-ID']
-                                                                            , self.user_agent
-                                                                            , self.user_agent_passwd
-                                                                           , self.rets_version)
-        self.login_called = True
-        return true
+            headers['RETS-UA-Authorization'] = self.rets_ua_authorization
+
+        auth = requests.auth.HTTPDigestAuth(self.user, self.passwd)
+
+        _session.headers = headers
+        _session.auth = auth
+
+        login_result = _session.get(self.login_url)
+        login_result.raise_for_status()
+
+        self.server_info = self._parse_login_response(login_result)
+
+        if self.user_agent_passwd:
+            self.session_id = login_result.cookies['RETS-Session-ID']
+        self._session = _session
+        return True
 
     def logout(self):
-        if not self.login_called:
-            raise NoLoginException("You need to call login before logout")
-        
+        if not self._session:
+            return
         logout_url = urljoin(self.base_url, self.server_info['Logout'])
         if self.user_agent_passwd:
             self._set_rets_ua_authorization()
         logout_response = self._session.get(logout_url)
         logout_response.raise_for_status()
-        return xmltodict.parse(logout_response.text)
+        return logout_response.text
 
-    def getobject(self, obj_type, resource , obj_id):
-        if not self.login_called:
-            raise NoLoginException("You need to call login before getobject")
+    def get_object(self, obj_type, resource, obj_id):
         getobject_url = urljoin(self.base_url, self.server_info['GetObject'])
-        if self.user_agent_passwd:
-            self._set_rets_ua_authorization()
-        getobject_response = self._session.get(getobject_url + "?Type=%s&Resource=%s&ID=%s" % (obj_type, resource, obj_id))
-        getobject_response.raise_for_status()
-        return xmltodict.parse(getobject_response.content)
+        response = self.session.get(
+            getobject_url + "?Type=%s&Resource=%s&ID=%s" % (
+                obj_type, resource, obj_id))
+        if response.headers['content-type'] == 'text/plain':
+            return self._parse_common_response(response)
+        return getobject_response.content
 
-                
-    def getmetadata(self):
-        if not self.login_called:
-            raise NoLoginException("You need to call login before getmetadata")
-        
+    def get_metadata(self):
         get_meta_url = urljoin(self.base_url, self.server_info['GetMetadata'])
-        if self.user_agent_passwd:
-            self._set_rets_ua_authorization()
-        response = self._session.get(get_meta_url + '?Type=METADATA-SYSTEM&ID=*&Format=STANDARD-XML')
-        response.raise_for_status()
-        return xmltodict.parse(response.text)
-    
-    def search(self, resource, search_class, query, limit, select):
-        if not self.login_called:
-            raise NoLoginException("You need to call login before search")
-        
-        if limit:
-            limit = 'NONE'
+        response = self.session.get(
+            get_meta_url + '?Type=METADATA-SYSTEM&ID=*&Format=STANDARD-XML')
+        return self._parse_common_response(response)
+
+    def search(self, resource, search_class, query,
+               limit=30, offset=0, select=""):
         params = {'SearchType': resource,
                   'Class': search_class,
                   'Query': query,
                   'QueryType': 'DMQL2',
-                  'Count': '0',
+                  'Count': offset,
                   'Format': 'COMPACT-DECODED',
                   'Limit': limit,
                   'Select': select,
                   'StandardNames': '0'}
         search_url = urljoin(self.base_url, self.server_info['Search'])
-        if self.user_agent_passwd:
-            self._set_rets_ua_authorization()
-        search_response = self._session.post(search_url, params)
-        search_response.raise_for_status()
-        return xmltodict.parse(search_response.text)
+        response = self.session.post(search_url, params)
+        return self._parse_common_response(response)
+
+    def _parse_login_response(self, response):
+        response_dict = self._parse_common_response(response)
+        rets_info = response_dict["RETS"]['RETS-RESPONSE'].split('\n')
+        rets_info_dict = {}
+        for info_item in rets_info:
+            if info_item.strip():
+                key_value_pair = info_item.split('=')
+                rets_info_dict[
+                    key_value_pair[0].strip()] = key_value_pair[1].strip()
+        return rets_info_dict
+
+    def _parse_common_response(self, response):
+        response.raise_for_status()
+        response_dict = xmltodict.parse(response.text)
+        reply_code = response_dict["RETS"]["@ReplyCode"]
+        reply_text = response_dict["RETS"]["@ReplyText"]
+        if reply_code != '0':
+            raise ValueError(reply_code + "," + reply_text)
+        return response_dict
