@@ -79,9 +79,9 @@ class RetsSession(object):
         logout_url = urljoin(self.base_url, self.server_info['Logout'])
         if self.user_agent_passwd:
             self._set_rets_ua_authorization()
-        logout_response = self._session.get(logout_url)
-        logout_response.raise_for_status()
-        return logout_response.text
+        response = self._session.get(logout_url)
+        response.raise_for_status()
+        return self._parse_common_response(response)
 
     def get_object(self, obj_type, resource, obj_id):
         getobject_url = urljoin(self.base_url, self.server_info['GetObject'])
