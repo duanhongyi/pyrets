@@ -3,14 +3,23 @@ pyrets
 
 Using python3, it supports the login, search, getmetadata and logout transaction.
 
-    rets_session = pyrets.RetsSession(user, passwd, user_agent, rets_version, login_url, user_agent_passwd)
-    
+    import pyrets.session
+    rets_session = pyrets.session.RetsSession(
+        "http://brc.rebretstest.interealty.com/Login.asmx/Login",
+        "RETS***",
+        "****",
+        "****/1.0",
+        "***_",
+        "RETS/1.7",
+    )
+
+
     #login, login is required before you do any other transactions
     response_text = rets_session.login()
     print(response_text)
 
-	#getmetadata
-    metadata_text = rets_session.getmetadata()
+    #getmetadata
+    metadata_text = rets_session.get_metadata()
     with open('./12meta.xml','w') as f:
         f.write(metadata_text)
     
@@ -19,11 +28,10 @@ Using python3, it supports the login, search, getmetadata and logout transaction
 	with open('./a.jpg', 'wb') as f:
 	    f.write(object_bin)
 	    
-	#search
-	response = rets_session.search('Property', 'RE_1', '(L_ListingID=40621107)', 1, 'L_UpdateDate')
-	print(response)
+    #search
+    response = rets_session.search("Property","2", "(217=2014-01-01T12:31:00Z+)")
+    print(response)
 	
-	#logout
+    #logout
     response_text = rets_session.logout()  
     print(response_text)
-
