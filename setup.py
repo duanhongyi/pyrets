@@ -19,7 +19,7 @@ setup(name='scseg',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
-      install_requires=[],
+      install_requires=["xmltodict",],
       platforms = 'all platform',
       license = 'BSD',
       )

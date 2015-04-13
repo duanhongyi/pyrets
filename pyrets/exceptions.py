@@ -1,0 +1,2 @@
+class NoLoginException(Exception):
+    pass
