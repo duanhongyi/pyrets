@@ -9,6 +9,8 @@ import time
 import urllib.parse
 from urllib.parse import urlparse, urljoin
 
+from .exceptions import raise_rets_exception, RetsNotLoginException
+
 
 class RetsSession(object):
 
@@ -44,7 +46,7 @@ class RetsSession(object):
     @property
     def session(self):
         if not self._session:
-            raise ValueError("You need to call login")
+            raise RetsNotLoginException("You need to call login")
         if self.user_agent_passwd:
             self._session.headers[
                 'RETS-UA-Authorization'] = self.rets_ua_authorization
@@ -88,7 +90,7 @@ class RetsSession(object):
         response = self.session.get(
             getobject_url + "?Type=%s&Resource=%s&ID=%s" % (
                 obj_type, resource, obj_id))
-        if response.headers['content-type'] == 'text/plain':
+        if 'text/xml' in response.headers['content-type']:
             return self._parse_common_response(response)
         return response.content
 
@@ -130,6 +132,5 @@ class RetsSession(object):
         response_dict = xmltodict.parse(response.text)
         reply_code = response_dict["RETS"]["@ReplyCode"]
         reply_text = response_dict["RETS"]["@ReplyText"]
-        if reply_code != '0':
-            raise ValueError(reply_code + "," + reply_text)
+        raise_rets_exception(reply_code, reply_text)
         return response_dict
