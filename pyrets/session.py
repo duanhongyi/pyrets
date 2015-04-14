@@ -98,13 +98,13 @@ class RetsSession(object):
             get_meta_url + '?Type=METADATA-SYSTEM&ID=*&Format=STANDARD-XML')
         return self._parse_common_response(response)
 
-    def search(self, resource, search_class, query,
-               limit=30, offset=0, select=""):
+    def search(self, resource, search_class,
+               query, limit=30, select=""):
         params = {'SearchType': resource,
                   'Class': search_class,
                   'Query': query,
                   'QueryType': 'DMQL2',
-                  'Count': offset,
+                  'Count': 1,
                   'Format': 'COMPACT-DECODED',
                   'Limit': limit,
                   'Select': select,
@@ -132,3 +132,9 @@ class RetsSession(object):
         if reply_code != '0':
             raise ValueError(reply_code + "," + reply_text)
         return response_dict
+
+
+
+
+
+
