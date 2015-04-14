@@ -51,6 +51,7 @@ class RetsSession(object):
         return self._session
 
     def login(self):
+        self.session_id = ''
         _session = requests.session()
         headers = {'User-Agent': self.user_agent,
                    'RETS-Version': self.rets_version,
@@ -76,6 +77,7 @@ class RetsSession(object):
     def logout(self):
         if not self._session:
             return
+        self.session_id = ''
         logout_url = urljoin(self.base_url, self.server_info['Logout'])
         response = self._session.get(logout_url)
         response.raise_for_status()
@@ -88,7 +90,7 @@ class RetsSession(object):
                 obj_type, resource, obj_id))
         if response.headers['content-type'] == 'text/plain':
             return self._parse_common_response(response)
-        return getobject_response.content
+        return response.content
 
     def get_metadata(self):
         get_meta_url = urljoin(self.base_url, self.server_info['GetMetadata'])
@@ -97,7 +99,7 @@ class RetsSession(object):
         return self._parse_common_response(response)
 
     def search(self, resource, search_class,
-               query, limit=30, select=""):
+               query, limit=30, offset=0, select=""):
         params = {'SearchType': resource,
                   'Class': search_class,
                   'Query': query,
@@ -105,6 +107,7 @@ class RetsSession(object):
                   'Count': 1,
                   'Format': 'COMPACT-DECODED',
                   'Limit': limit,
+                  'Offset': offset,
                   'Select': select,
                   'StandardNames': '0'}
         search_url = urljoin(self.base_url, self.server_info['Search'])
@@ -130,9 +133,3 @@ class RetsSession(object):
         if reply_code != '0':
             raise ValueError(reply_code + "," + reply_text)
         return response_dict
-
-
-
-
-
-
