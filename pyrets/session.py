@@ -9,7 +9,7 @@ import time
 import urllib.parse
 from urllib.parse import urlparse, urljoin
 
-from .exceptions import raise_rets_exception, RetsNotLoginException
+from .exceptions import raise_rets_exception, NotLoginException
 
 
 class RetsSession(object):
@@ -46,7 +46,7 @@ class RetsSession(object):
     @property
     def session(self):
         if not self._session:
-            raise RetsNotLoginException("You need to call login")
+            raise NotLoginException("You need to call login")
         if self.user_agent_passwd:
             self._session.headers[
                 'RETS-UA-Authorization'] = self.rets_ua_authorization
