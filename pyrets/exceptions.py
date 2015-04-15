@@ -24,7 +24,7 @@ class NoRecordsFoundException(RetsException):
 
 exception_mapping = {
     "20037": RetsNotLoginException,
-    "20203": RetsNotSupportException，
+    "20203": RetsNotSupportException,
     "20201": RetsNotSupportException
 }
 
