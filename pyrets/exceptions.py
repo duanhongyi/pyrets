@@ -23,9 +23,9 @@ class NoRecordsFoundException(RetsException):
 
 
 exception_mapping = {
-    "20037": RetsNotLoginException,
-    "20203": RetsNotSupportException,
-    "20201": RetsNotSupportException
+    "20037": NotLoginException,
+    "20203": NotSupportException,
+    "20201": NoRecordsFoundException
 }
 
 def raise_rets_exception(reply_code, reply_text):
