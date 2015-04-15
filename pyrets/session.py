@@ -86,6 +86,8 @@ class RetsSession(object):
         return self._parse_common_response(response)
 
     def get_object(self, obj_type, resource, obj_id):
+        if not self._session:
+            raise NotLoginException("You need to call login")
         getobject_url = urljoin(self.base_url, self.server_info['GetObject'])
         response = self.session.get(
             getobject_url + "?Type=%s&Resource=%s&ID=%s" % (
@@ -95,6 +97,8 @@ class RetsSession(object):
         return response.content
 
     def get_metadata(self):
+        if not self._session:
+            raise NotLoginException("You need to call login")
         get_meta_url = urljoin(self.base_url, self.server_info['GetMetadata'])
         response = self.session.get(
             get_meta_url + '?Type=METADATA-SYSTEM&ID=*&Format=STANDARD-XML')
@@ -102,6 +106,8 @@ class RetsSession(object):
 
     def search(self, resource, search_class,
                query, limit=30, offset=0, select=""):
+        if not self._session:
+            raise NotLoginException("You need to call login")
         params = {'SearchType': resource,
                   'Class': search_class,
                   'Query': query,
