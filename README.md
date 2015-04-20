@@ -19,9 +19,8 @@ Using python3, it supports the login, search, getmetadata and logout transaction
     print(response_text)
 
     #getmetadata
-    metadata_text = rets_session.get_metadata()
-    with open('./12meta.xml','w') as f:
-        f.write(metadata_text)
+    metadata_dict = rets_session.get_metadata()
+
     
     #getobject    
     object_bin = rets_session.getobject('Photo','Property','40621107:1')
@@ -30,8 +29,6 @@ Using python3, it supports the login, search, getmetadata and logout transaction
 	    
     #search
     response = rets_session.search("Property","2", "(217=2014-01-01T12:31:00Z+)")
-    print(response)
 	
     #logout
-    response_text = rets_session.logout()  
-    print(response_text)
+    rets_session.logout()
